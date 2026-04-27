@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import errors
 
 load_dotenv()
 
@@ -12,11 +13,17 @@ def generate_recipe_with_gemini(prompt):
     if not api_key:
         return None
 
-    client = genai.Client(api_key=api_key)
+    try:
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-    )
+        return response.text
 
-    return response.text
+    except errors.ServerError:
+        return None
+
+    except Exception:
+        return None

@@ -25,7 +25,7 @@ def generate_mock_recipe(ingredients):
 
 def get_recipe(ingredients):
     prompt = build_recipe_prompt(ingredients)
-    return generate_recipe_with_gemini(prompt)
+    recipe = generate_recipe_with_gemini(prompt)
 
     if recipe:
         return recipe

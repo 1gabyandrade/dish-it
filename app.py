@@ -2,7 +2,17 @@ from venv import logger
 
 import streamlit as st
 
+from components.ingredient_selector import ingredient_selector
 from services.recipe_service import get_recipe
+
+
+def load_css():
+    with open("assets/styles.css", "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+load_css()
 
 st.set_page_config(page_title="Dish-It", page_icon="🍳")
 
@@ -45,20 +55,13 @@ def show_main_app():
 
     st.write("What do you have today?")
 
-    ingredients = st.text_input("Enter ingredients")
+    selected_ingredients = ingredient_selector()
 
     if st.button("Generate Recipe"):
-        if not ingredients:
-            st.warning("Please enter ingredients.")
+        if not selected_ingredients:
+            st.warning("Please select at least one ingredient.")
         else:
-            ingredient_list = [
-                ingredient.strip()
-                for ingredient in ingredients.split(",")
-                if ingredient.strip()
-            ]
-
-            recipe = get_recipe(ingredient_list)
-
+            recipe = get_recipe(selected_ingredients)
             st.markdown(recipe)
 
 
