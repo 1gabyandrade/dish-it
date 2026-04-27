@@ -2,6 +2,8 @@ from venv import logger
 
 import streamlit as st
 
+from services.recipe_service import get_recipe
+
 st.set_page_config(page_title="Dish-It", page_icon="🍳")
 
 if "logged_in" not in st.session_state:
@@ -49,8 +51,15 @@ def show_main_app():
         if not ingredients:
             st.warning("Please enter ingredients.")
         else:
-            st.success(f"Generating recipe for {ingredients}")
-            # later → call Gemini here
+            ingredient_list = [
+                ingredient.strip()
+                for ingredient in ingredients.split(",")
+                if ingredient.strip()
+            ]
+
+            recipe = get_recipe(ingredient_list)
+
+            st.markdown(recipe)
 
 
 # -----------------------------
