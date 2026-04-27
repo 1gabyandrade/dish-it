@@ -1,3 +1,4 @@
+from services.gemini_service import generate_recipe_with_gemini
 from utils.prompts import build_recipe_prompt
 
 
@@ -23,5 +24,10 @@ def generate_mock_recipe(ingredients):
 
 
 def get_recipe(ingredients):
-    build_recipe_prompt(ingredients)
+    prompt = build_recipe_prompt(ingredients)
+    return generate_recipe_with_gemini(prompt)
+
+    if recipe:
+        return recipe
+
     return generate_mock_recipe(ingredients)
