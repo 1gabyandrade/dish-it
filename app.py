@@ -5,15 +5,6 @@ import streamlit as st
 from components.ingredient_selector import ingredient_selector
 from services.recipe_service import get_recipe
 
-
-def load_css():
-    with open("assets/styles.css", "r") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-load_css()
-
 st.set_page_config(page_title="Dish-It", page_icon="🍳")
 
 if "logged_in" not in st.session_state:
