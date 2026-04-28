@@ -5,6 +5,8 @@ import streamlit as st
 from components.ingredient_selector import ingredient_selector
 from services.recipe_service import get_recipe
 
+st.set_page_config(page_title="Dish-It", page_icon="🍳")
+
 
 def load_css():
     with open("assets/styles.css") as f:
@@ -12,11 +14,11 @@ def load_css():
 
     st.markdown(
         f"""
-      <style>
-      @import url('https://fonts.googleapis.com/css2?family=Passion+One:wght@700&display=swap');
-      {css}
-      </style>
-      """,
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Passion+One:wght@700&display=swap');
+        {css}
+        </style>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -24,7 +26,7 @@ def load_css():
 load_css()
 
 
-def set_bg_image():
+def set_login_background():
     with open("assets/header.png", "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
 
@@ -33,8 +35,8 @@ def set_bg_image():
         <style>
         .stApp {{
             background:
-                url("data:image/png;base64,{encoded}") top center / auto 260px repeat-x,
-                #fff5ec;  /* 👈 background color UNDER the image */
+              url("data:image/png;base64,{encoded}") top center / 100% auto no-repeat,
+              #fff5ec;
         }}
         </style>
         """,
@@ -42,12 +44,33 @@ def set_bg_image():
     )
 
 
-set_bg_image()
+def set_main_background():
+    with open("assets/background.png", "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
 
-st.set_page_config(page_title="Dish-It", page_icon="🍳")
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background:
+                url("data:image/png;base64,{encoded}");
+            background-size: cover;
+            background-repeat: repeat;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+if "has_generated" not in st.session_state:
+    st.session_state.has_generated = False
+
+if "generated_recipe" not in st.session_state:
+    st.session_state.generated_recipe = ""
 
 
 # -----------------------------
@@ -63,6 +86,7 @@ def show_login():
             """,
             unsafe_allow_html=True,
         )
+
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
 
@@ -75,6 +99,8 @@ def show_login():
             if username and password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
+                st.session_state.has_generated = False
+                st.session_state.generated_recipe = ""
                 st.rerun()
             else:
                 st.warning("Please enter username and password.")
@@ -88,6 +114,7 @@ def show_login():
         st.markdown('<p class="new-here">New here?</p>', unsafe_allow_html=True)
 
         signup_left, signup_center, signup_right = st.columns([1, 1, 1])
+
         with signup_center:
             sign_in_clicked = st.button("SIGN IN")
 
@@ -99,24 +126,49 @@ def show_login():
 # MAIN APP PAGE
 # -----------------------------
 def show_main_app():
-    st.title(f"Welcome, {st.session_state.username}")
+    st.markdown(
+        """
+        <div class="navbar">
+            <span class="logo">DISH-IT</span>
+            <span class="menu">Home | My Recipes | My Pantry | History</span>
+            <span class="account">My Account | Log Out</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.write("What do you have today?")
-
-    selected_ingredients = ingredient_selector()
-
-    if st.button("Generate Recipe"):
-        if not selected_ingredients:
-            st.warning("Please select at least one ingredient.")
+    with st.container(key="main_card"):
+        if st.session_state.has_generated:
+            title_text = f"Here are your recipes, @{st.session_state.username}!"
         else:
-            recipe = get_recipe(selected_ingredients)
-            st.markdown(recipe)
+            title_text = f"Welcome back, @{st.session_state.username}"
+
+        st.markdown(
+            f"<h1 class='main-title'>{title_text}</h1>",
+            unsafe_allow_html=True,
+        )
+
+        selected_ingredients = ingredient_selector()
+
+        if st.button("Generate Recipe"):
+            if not selected_ingredients:
+                st.warning("Please select at least one ingredient.")
+            else:
+                recipe = get_recipe(selected_ingredients)
+                st.session_state.generated_recipe = recipe
+                st.session_state.has_generated = True
+                st.rerun()
+
+        if st.session_state.has_generated and st.session_state.generated_recipe:
+            st.markdown(st.session_state.generated_recipe)
 
 
 # -----------------------------
 # ROUTING LOGIC
 # -----------------------------
 if not st.session_state.logged_in:
+    set_login_background()
     show_login()
 else:
+    set_main_background()
     show_main_app()
