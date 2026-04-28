@@ -1,0 +1,169 @@
+@import url("https://fonts.googleapis.com/css2?family=Passion+One:wght@700&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+.block-container {
+  padding-top: 2rem;
+}
+
+.st-key-login_card {
+  position: fixed;
+  top: clamp(140px, 20vh, 220px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: min(90vw, 540px);
+  background-color: #ffc933;
+  border-radius: clamp(24px, 4vw, 32px);
+  padding: 36px clamp(24px, 6vw, 60px) 28px clamp(24px, 6vw, 60px) !important;
+  text-align: center;
+  z-index: 10;
+}
+
+.title-wrapper {
+  width: 100%;
+}
+
+.dish-title {
+  color: #82301a !important;
+  font-family: "Passion One", sans-serif !important;
+  font-size: clamp(56px, 9vw, 95px) !important;
+  font-weight: 900;
+  margin: 0 0 10px 0 !important;
+  text-align: center !important;
+  width: 100% !important;
+  display: block;
+}
+
+.st-key-login_card h1 {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.st-key-login_card label,
+.st-key-login_card label p {
+  color: #82301a !important;
+  font-weight: 800 !important;
+  font-size: clamp(18px, 2.5vw, 22px) !important;
+  display: block;
+  text-align: center !important;
+  width: 100%;
+  margin-bottom: 3px !important;
+}
+
+.st-key-login_card div[data-baseweb="input"] {
+  background-color: #fff5ec !important;
+  border: 2px solid #387647 !important;
+  border-radius: 18px !important;
+  width: min(100%, 360px) !important;
+  margin: 0 auto !important;
+}
+
+.st-key-login_card input {
+  background-color: #fff5ec !important;
+  color: #82301a !important;
+  text-align: center;
+  font-weight: 600;
+  width: 100% !important;
+  min-width: 100% !important;
+  caret-color: #82301a !important;
+}
+
+.st-key-login_card div[data-testid="stButton"] {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.st-key-login_card div[data-testid="stButton"] button {
+  background-color: #387647 !important;
+  color: #fff5ec !important;
+  border: none !important;
+  border-radius: 24px !important;
+  width: min(70vw, 180px);
+  height: 54px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.st-key-login_card div[data-testid="stButton"] > button:hover {
+  background-color: #2f633c !important;
+  color: #fff5ec !important;
+}
+
+.forgot {
+  color: #82301a;
+  font-weight: 700;
+  margin-top: 10px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.new-here {
+  color: #82301a;
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 800;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 6px;
+}
+
+.login-divider {
+  border: 0 !important;
+  height: 2px !important;
+  width: min(70%, 360px) !important;
+  margin: 16px auto !important;
+  border-radius: 999px;
+  background-color: #fff5ec !important;
+}
+
+.st-key-login_card .stTextInput {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 700px) {
+  .block-container {
+    padding-top: 1rem;
+  }
+
+  .st-key-login_card {
+    width: 92vw;
+    margin: 60px auto 0 auto;
+    padding: 28px 22px 24px 22px !important;
+  }
+
+  .dish-title {
+    font-size: 58px !important;
+  }
+
+  .st-key-login_card div[data-baseweb="input"] {
+    width: 90% !important;
+  }
+
+  .login-divider {
+    width: 75% !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .dish-title {
+    font-size: 48px !important;
+  }
+
+  .st-key-login_card {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92vw;
+    padding: 28px 22px 24px 22px !important;
+    border-radius: 22px;
+  }
+
+  .st-key-login_card div[data-testid="stButton"] button {
+    width: 160px;
+  }
+}
