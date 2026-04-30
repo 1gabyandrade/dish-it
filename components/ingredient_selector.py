@@ -8,11 +8,12 @@ def ingredient_selector():
         st.session_state.selected_ingredients = []
 
     selected_ingredients = st.multiselect(
-        "What do you have today?",
+        "Ingredients",
         options=INGREDIENTS,
         default=st.session_state.selected_ingredients,
-        placeholder="Type at least 2 letters, e.g. ch",
+        placeholder="What do you have today?",
         key="ingredient_multiselect",
+        label_visibility="collapsed",
     )
 
     st.session_state.selected_ingredients = selected_ingredients

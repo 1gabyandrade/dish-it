@@ -235,9 +235,15 @@ def show_main_app():
             unsafe_allow_html=True,
         )
 
-        selected_ingredients = ingredient_selector()
+        input_col, button_col = st.columns([6, 1], vertical_alignment="center")
 
-        if st.button("Generate Recipe", key="generate_recipe_btn"):
+        with input_col:
+            selected_ingredients = ingredient_selector()
+
+        with button_col:
+            generate_clicked = st.button("Generate Recipe", key="generate_recipe_btn")
+
+        if generate_clicked:
             if not selected_ingredients:
                 st.warning("Please select at least one ingredient.")
             else:
@@ -247,8 +253,8 @@ def show_main_app():
                 st.rerun()
 
         if st.session_state.has_generated and st.session_state.generated_recipe:
-            st.markdown(st.session_state.generated_recipe)
-
+            with st.container(key="recipe_output"):
+                st.markdown(st.session_state.generated_recipe)
 
 load_css()
 init_db()
