@@ -7,7 +7,6 @@ from database.db import init_db
 from services.auth_service import authenticate_user, create_user
 from services.recipe_service import get_recipe
 
-
 st.set_page_config(page_title="Dish-It", page_icon="🍳", layout="wide")
 
 
@@ -235,13 +234,18 @@ def show_main_app():
             unsafe_allow_html=True,
         )
 
-        input_col, button_col = st.columns([6, 1], vertical_alignment="center")
-
+        input_col, button_col = st.columns(
+            [5, 1.4], gap="small", vertical_alignment="top"
+        )
         with input_col:
             selected_ingredients = ingredient_selector()
 
         with button_col:
-            generate_clicked = st.button("Generate Recipe", key="generate_recipe_btn")
+            with st.container(key="generate_action"):
+                generate_clicked = st.button(
+                    "Generate Recipe",
+                    key="generate_recipe_btn",
+                )
 
         if generate_clicked:
             if not selected_ingredients:
@@ -255,6 +259,7 @@ def show_main_app():
         if st.session_state.has_generated and st.session_state.generated_recipe:
             with st.container(key="recipe_output"):
                 st.markdown(st.session_state.generated_recipe)
+
 
 load_css()
 init_db()

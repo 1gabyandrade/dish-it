@@ -1,4 +1,4 @@
-streamlit
+gti streamlit
 python-dotenv
 google-genai
 streamlit-searchbox
