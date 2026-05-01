@@ -1,35 +1,35 @@
 from services.openrouter_service import generate_recipe_with_openrouter
 from utils.prompts import build_recipe_prompt
 
+NO_RECIPE_FOUND = "NO_RECIPE_FOUND"
+
 
 def get_recipe(ingredients):
-    prompt = build_recipe_prompt(ingredients)
+    if len(ingredients) < 2:
+        return """
+### Add more ingredients 👀
 
+Please add at least **2 ingredients** so I can create a better recipe for you.
+"""
+
+    prompt = build_recipe_prompt(ingredients)
     recipe = generate_recipe_with_openrouter(prompt)
 
-    if recipe:
+    if recipe and "NO_RECIPE_FOUND" not in recipe:
         return recipe
 
-    return generate_mock_recipe(ingredients)
+    return generate_no_recipe_message(ingredients)
 
 
-def generate_mock_recipe(ingredients):
+def generate_no_recipe_message(ingredients):
     ingredients_text = ", ".join(ingredients)
 
     return f"""
-### Quick Student Meal
+### Hmm… I couldn’t find a good recipe 😅
 
-**Cooking time:** 15 minutes
+I couldn’t create a realistic recipe using only:
 
-**Ingredients used:**
-{ingredients_text}
+**{ingredients_text}**
 
-**Instructions:**
-1. Prepare all ingredients.
-2. Heat a pan with a little oil or butter.
-3. Add the main ingredients and cook for a few minutes.
-4. Season with salt, pepper, or any spices you have.
-5. Serve warm and enjoy.
-
-**Dish-It tip:** This is a fallback recipe.
+Try adding one or two more ingredients, or swapping one of them.
 """

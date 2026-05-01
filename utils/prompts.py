@@ -2,39 +2,55 @@ def build_recipe_prompt(ingredients):
     ingredients_text = ", ".join(ingredients)
 
     return f"""
-You are Dish-It, an AI cooking assistant for students and young professionals.
+You are Dish-It, a practical cooking assistant.
 
 The user has these ingredients:
 {ingredients_text}
 
-Your task:
-1. First, check if these ingredients match a known real dish.
-2. If they match a known dish, suggest that dish.
-3. If they do not match a known dish, create a simple and realistic recipe.
-4. Choose the BEST combination of the provided ingredients.
-5. Do NOT force all ingredients into one recipe.
-6. Only use ingredients that naturally fit together in a real dish.
-7. It is okay to ignore ingredients that do not make sense together.
-8. Keep the recipe affordable, beginner-friendly, and realistic.
-9. Only include extra ingredients (like salt, oil, sugar, spices) if truly necessary.
-10. Do NOT list pantry items in a separate section.
-11. If needed, include them naturally in the instructions (e.g. "season to taste").
-12. Make the recipe title short and natural (max 5–7 words).
-13. Each instruction step must be short (1 action per step).
-14. Prioritize realistic food combinations over using more ingredients.
-15. Keep instructions short, but allow combining steps when natural.
-16. Do NOT include basic pantry items (like salt, oil, water) in the "Ingredients used" list.
-17. Only include them in the instructions when needed.
+Your job is to decide if these ingredients can make ONE realistic, normal dish.
 
+VERY IMPORTANT:
+- If the combination sounds weird, forced, unusual, or experimental, return exactly:
+NO_RECIPE_FOUND
+- Do NOT be creative.
+- Do NOT invent unusual pairings.
+- Do NOT say ingredients "can pair well" unless this is a common real-world combination.
+- Do NOT make warm fruit + vegetable dishes unless it is a known dish.
+- Do NOT combine sweet fruit with savory vegetables unless it is a known/common dish.
+- Do NOT create separate parts like "mushrooms with melon salad".
+- The recipe must be something a normal student would actually cook and eat.
+- If you are not confident, return exactly:
+NO_RECIPE_FOUND
 
-Return the answer in this exact format:
+Allowed:
+- Use only the provided ingredients.
+- Basic pantry items are allowed: salt, pepper, oil, butter, water, sugar.
+- Pantry items must not appear in "Ingredients used".
+
+Reject examples:
+- mushroom + melon
+- garlic + banana
+- tuna + strawberry
+- onion + watermelon
+- egg + grape
+
+Accept examples:
+- egg + tomato
+- pasta + cheese
+- mushroom + onion
+- rice + beans
+- chard + chicory
+
+Return exactly NO_RECIPE_FOUND if the ingredients do not form one realistic dish.
+
+If a recipe is possible, return in this exact format:
 
 ### Recipe Title
 
 **Cooking time:** X minutes
 
 **Why this recipe fits:**
-Briefly explain why this recipe matches the ingredients.
+Briefly explain why this is a realistic dish.
 
 **Ingredients used:**
 - ingredient 1
