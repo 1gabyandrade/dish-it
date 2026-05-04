@@ -188,6 +188,12 @@ Dish-It is currently an MVP. The focus is not to support every cooking case, but
 to prove that people can quickly move from "what do I have?" to "what can I
 cook?" with very little effort.
 
+For a record of technical hurdles and fixes, see:
+
+```text
+TRIAGE_LOG.md
+```
+
 The strongest next product improvements are:
 
 - Build the real `My Pantry` feature
