@@ -321,13 +321,21 @@
   font-weight: 600 !important;
 }
 
-/* INPUT / SEARCHBOX */
 .st-key-main_card div[data-baseweb="input"],
 .st-key-main_card div[data-baseweb="select"] > div {
   min-height: 48px !important;
   background-color: var(--cream) !important;
   border: 2px solid var(--yellow) !important;
   border-radius: 999px !important;
+}
+
+.st-key-main_card input {
+  background-color: var(--cream) !important;
+  color: var(--brown) !important;
+}
+
+.st-key-main_card div[data-baseweb="input"] {
+  background-color: var(--cream) !important;
 }
 
 .st-key-main_card div[data-baseweb="select"] > div {
@@ -541,7 +549,9 @@ iframe[title="streamlit_searchbox.searchbox"] {
   min-width: 190px !important;
 }
 
-.st-key-main_card [class*="st-key-favorite_remove_"] div[data-testid="stButton"] {
+.st-key-main_card
+  [class*="st-key-favorite_remove_"]
+  div[data-testid="stButton"] {
   display: flex;
   justify-content: flex-end;
   margin: 0 !important;
@@ -560,7 +570,9 @@ iframe[title="streamlit_searchbox.searchbox"] {
 }
 
 .st-key-favorite_recipe_action div[data-testid="stButton"] button:disabled,
-.st-key-favorite_recipe_action div[data-testid="stButton"] button:disabled:hover {
+.st-key-favorite_recipe_action
+  div[data-testid="stButton"]
+  button:disabled:hover {
   color: var(--brown) !important;
   background-color: #f6d36c !important;
   opacity: 0.72 !important;
@@ -618,6 +630,14 @@ iframe[title="streamlit_searchbox.searchbox"] {
   color: #f3e6d8 !important;
   font-size: 14px;
   font-weight: 700;
+}
+
+.st-key-main_card div[data-baseweb="input"] > div {
+  background-color: var(--cream) !important;
+}
+
+.st-key-main_card div[data-baseweb="input"] button {
+  background-color: var(--cream) !important;
 }
 
 /* RESPONSIVE */
@@ -785,4 +805,74 @@ iframe[title="streamlit_searchbox.searchbox"] {
   .login-divider {
     margin: clamp(8px, 1vh, 12px) auto !important;
   }
+}
+
+.account a,
+.account a:visited {
+  color: var(--brown);
+  text-decoration: none;
+}
+
+.account a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.account-divider {
+  margin: 32px 0 24px;
+  border: 0;
+  border-top: 2px solid rgba(255, 245, 236, 0.28);
+}
+
+/* ACCOUNT BUTTONS */
+.st-key-save_account_action div[data-testid="stButton"] button,
+.st-key-delete_account_action div[data-testid="stButton"] button,
+.st-key-confirm_delete_yes div[data-testid="stButton"] button,
+.st-key-confirm_delete_no div[data-testid="stButton"] button {
+  width: min(100%, 320px) !important;
+  height: 58px !important;
+  min-height: 58px !important;
+  padding: 0 24px !important;
+
+  border-radius: 999px !important;
+  box-shadow: none !important;
+
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.st-key-save_account_action div[data-testid="stButton"] button *,
+.st-key-delete_account_action div[data-testid="stButton"] button *,
+.st-key-confirm_delete_yes div[data-testid="stButton"] button *,
+.st-key-confirm_delete_no div[data-testid="stButton"] button * {
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: 500 !important;
+}
+
+.st-key-save_account_action div[data-testid="stButton"] button,
+.st-key-confirm_delete_no div[data-testid="stButton"] button {
+  color: var(--brown) !important;
+  background-color: var(--yellow) !important;
+  border: 0 !important;
+}
+
+.st-key-save_account_action div[data-testid="stButton"] button:hover,
+.st-key-confirm_delete_no div[data-testid="stButton"] button:hover {
+  background-color: var(--yellow-hover) !important;
+}
+
+.st-key-delete_account_action div[data-testid="stButton"] button,
+.st-key-confirm_delete_yes div[data-testid="stButton"] button {
+  color: var(--cream) !important;
+  background-color: #c62b23 !important;
+  border: 2px solid #e28b85 !important;
+}
+
+.st-key-delete_account_action div[data-testid="stButton"] button:hover,
+.st-key-confirm_delete_yes div[data-testid="stButton"] button:hover {
+  background-color: #a8221b !important;
+  border-color: #d66f68 !important;
 }

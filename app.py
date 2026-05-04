@@ -1,13 +1,19 @@
 import base64
 import secrets
+import sqlite3
 from html import escape
 from urllib.parse import urlencode
 
 import streamlit as st
 
 from components.ingredient_selector import ingredient_selector
-from database.db import init_db
-from services.auth_service import authenticate_user, create_user
+from database.db import get_connection, init_db
+from services.auth_service import (
+    authenticate_user,
+    check_password,
+    create_user,
+    hash_password,
+)
 from services.favorite_service import (
     add_favorite_recipe,
     get_favorite_recipe_id,
@@ -24,6 +30,7 @@ PAGE_QUERY_VALUES = {
     "my_recipes": "my-recipes",
     "my_pantry": "my-pantry",
     "history": "history",
+    "my_account": "my-account",
 }
 
 NAV_ITEMS = (
@@ -40,6 +47,7 @@ SESSION_DEFAULTS = {
     "generated_recipe": "",
     "generated_recipe_ingredients": [],
     "favorite_notice": "",
+    "confirm_delete_account": False,
 }
 
 INVALID_RECIPE_PHRASES = (
@@ -119,6 +127,13 @@ def start_auth_session(user_data):
     get_auth_sessions()[auth_token] = user_data.copy()
     set_authenticated_user(user_data, auth_token)
     set_auth_token_in_url(auth_token)
+
+
+def update_stored_auth_session(user_data):
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if auth_token:
+        get_auth_sessions()[auth_token] = user_data.copy()
 
 
 def restore_auth_session():
@@ -252,8 +267,85 @@ def logout():
     clear_auth_token_from_url()
     st.session_state.logged_in = False
     st.session_state.auth_mode = "login"
+    st.session_state.confirm_delete_account = False
     reset_recipe_state()
     st.rerun()
+
+
+def update_user_account(user_id, username, email, current_password, new_password=None):
+    with get_connection() as conn:
+        user = conn.execute(
+            """
+            SELECT password_hash
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+
+        if not user:
+            return False, "User not found."
+
+        password_hash = user[0]
+
+        if not check_password(current_password, password_hash):
+            return False, "Current password is incorrect."
+
+        try:
+            if new_password:
+                new_password_hash = hash_password(new_password)
+
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET username = ?, email = ?, password_hash = ?
+                    WHERE id = ?
+                    """,
+                    (username, email, new_password_hash, user_id),
+                )
+            else:
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET username = ?, email = ?
+                    WHERE id = ?
+                    """,
+                    (username, email, user_id),
+                )
+
+        except sqlite3.IntegrityError:
+            return False, "Username or email is already registered."
+
+    return True, "Account updated successfully."
+
+
+def delete_user_account(user_id):
+    with get_connection() as conn:
+        conn.execute(
+            """
+            DELETE FROM favorite_recipes
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        )
+
+        conn.execute(
+            """
+            DELETE FROM recipe_history
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        )
+
+        conn.execute(
+            """
+            DELETE FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        )
+
+    return True
 
 
 def show_login():
@@ -292,20 +384,15 @@ def show_login():
                     else:
                         st.error(message)
 
-            st.markdown(
-                '<p class="forgot">Forgot your password? <u>Click here</u></p>',
-                unsafe_allow_html=True,
-            )
-
             st.markdown('<hr class="login-divider">', unsafe_allow_html=True)
             st.markdown('<p class="new-here">New here?</p>', unsafe_allow_html=True)
 
             _, signup_center, _ = st.columns([1, 1, 1])
 
             with signup_center:
-                sign_in_clicked = st.button("SIGN IN", key="signup_btn")
+                sign_up_clicked = st.button("SIGN UP", key="signup_btn")
 
-            if sign_in_clicked:
+            if sign_up_clicked:
                 st.session_state.auth_mode = "signup"
                 st.rerun()
 
@@ -367,6 +454,9 @@ def show_nav_bar(active_page=None):
             )
         )
 
+    account_active_class = " is-active" if active_page == "my_account" else ""
+    my_account_href = build_app_href("my_account")
+
     with st.container(key="nav_bar"):
         st.markdown(
             f"""
@@ -376,7 +466,10 @@ def show_nav_bar(active_page=None):
                     {"".join(nav_html)}
                 </div>
                 <div class="account">
-                    My Account <span class="nav-separator">|</span>
+                    <a class="account-link{account_active_class}"
+                       href="{my_account_href}"
+                       target="_self">My Account</a>
+                    <span class="nav-separator">|</span>
                 </div>
             </div>
             """,
@@ -606,16 +699,12 @@ def show_my_recipes_page():
                         show_recipe_meta(
                             [
                                 "Ingredients: "
-                                + format_ingredients(
-                                    favorite_recipe["ingredients"]
-                                )
+                                + format_ingredients(favorite_recipe["ingredients"])
                             ]
                         )
 
                 with action_col:
-                    with st.container(
-                        key=f"favorite_remove_{favorite_recipe['id']}"
-                    ):
+                    with st.container(key=f"favorite_remove_{favorite_recipe['id']}"):
                         remove_clicked = st.button(
                             "♥",
                             key=f"remove_favorite_{favorite_recipe['id']}",
@@ -627,9 +716,7 @@ def show_my_recipes_page():
                         st.session_state.user_id,
                         favorite_recipe["id"],
                     )
-                    st.session_state.favorite_notice = (
-                        "Recipe removed from My Recipes."
-                    )
+                    st.session_state.favorite_notice = "Recipe removed from My Recipes."
                     st.rerun()
 
                 show_recipe_body_without_title(favorite_recipe["recipe_text"])
@@ -675,6 +762,119 @@ def show_history_page():
                 show_recipe_body_without_title(history_recipe["recipe_text"])
 
 
+def show_my_account_page():
+    show_nav_bar(active_page="my_account")
+
+    with st.container(key="main_card"):
+        show_page_title(f"@{st.session_state.username}")
+
+        st.markdown(
+            "<p class='section-label'>Edit your account details</p>",
+            unsafe_allow_html=True,
+        )
+
+        username = st.text_input(
+            "Username",
+            value=st.session_state.username,
+            key="account_username",
+        )
+
+        email = st.text_input(
+            "Email",
+            value=st.session_state.email,
+            key="account_email",
+        )
+
+        current_password = st.text_input(
+            "Current Password",
+            type="password",
+            key="account_current_password",
+        )
+
+        new_password = st.text_input(
+            "New Password",
+            type="password",
+            key="account_new_password",
+        )
+
+        confirm_new_password = st.text_input(
+            "Confirm New Password",
+            type="password",
+            key="account_confirm_new_password",
+        )
+
+        with st.container(key="save_account_action"):
+            save_clicked = st.button("Save Changes", key="save_account_btn")
+
+        if save_clicked:
+            if not username or not email or not current_password:
+                st.warning("Please fill in username, email, and current password.")
+            elif new_password and new_password != confirm_new_password:
+                st.error("New passwords do not match.")
+            elif confirm_new_password and not new_password:
+                st.error("Please enter the new password first.")
+            else:
+                success, message = update_user_account(
+                    st.session_state.user_id,
+                    username,
+                    email,
+                    current_password,
+                    new_password if new_password else None,
+                )
+
+                if success:
+                    user_data = {
+                        "id": st.session_state.user_id,
+                        "username": username,
+                        "email": email,
+                    }
+
+                    st.session_state.username = username
+                    st.session_state.email = email
+                    update_stored_auth_session(user_data)
+
+                    st.success(message)
+                else:
+                    st.error(message)
+
+        st.markdown("<hr class='account-divider'>", unsafe_allow_html=True)
+
+        with st.container(key="delete_account_action"):
+            delete_clicked = st.button("Delete Account", key="delete_account_btn")
+
+        if delete_clicked:
+            st.session_state.confirm_delete_account = True
+
+        if st.session_state.confirm_delete_account:
+            with st.container(key="delete_account_confirm_box"):
+                st.warning(
+                    "Are you sure you want to delete your account? "
+                    "This action cannot be undone."
+                )
+
+                yes_col, no_col = st.columns(2)
+
+                with yes_col:
+                    confirm_yes = st.button(
+                        "Yes, delete my account",
+                        key="confirm_delete_yes",
+                    )
+
+                with no_col:
+                    confirm_no = st.button(
+                        "No, keep editing",
+                        key="confirm_delete_no",
+                    )
+
+                if confirm_yes:
+                    delete_user_account(st.session_state.user_id)
+                    logout()
+
+                if confirm_no:
+                    st.session_state.confirm_delete_account = False
+                    st.rerun()
+
+
 load_css()
 init_db()
 init_session_state()
@@ -690,5 +890,6 @@ else:
         "my_recipes": show_my_recipes_page,
         "my_pantry": show_my_pantry_page,
         "history": show_history_page,
+        "my_account": show_my_account_page,
     }
     page_renderers.get(current_page, show_main_app)()
