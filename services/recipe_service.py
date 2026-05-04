@@ -15,7 +15,7 @@ Please add at least **2 ingredients** so I can create a better recipe for you.
     prompt = build_recipe_prompt(ingredients)
     recipe = generate_recipe_with_openrouter(prompt)
 
-    if recipe and "NO_RECIPE_FOUND" not in recipe:
+    if recipe and NO_RECIPE_FOUND not in recipe:
         return recipe
 
     return generate_no_recipe_message(ingredients)

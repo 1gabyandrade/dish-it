@@ -1,13 +1,160 @@
 import base64
+import secrets
+from html import escape
+from urllib.parse import urlencode
 
 import streamlit as st
 
 from components.ingredient_selector import ingredient_selector
 from database.db import init_db
 from services.auth_service import authenticate_user, create_user
+from services.favorite_service import (
+    add_favorite_recipe,
+    get_favorite_recipe_id,
+    get_favorite_recipes,
+    remove_favorite_recipe,
+)
+from services.history_service import add_recipe_history, get_recipe_history
 from services.recipe_service import get_recipe
 
 st.set_page_config(page_title="Dish-It", page_icon="🍳", layout="wide")
+
+PAGE_QUERY_VALUES = {
+    "home": None,
+    "my_recipes": "my-recipes",
+    "my_pantry": "my-pantry",
+    "history": "history",
+}
+
+NAV_ITEMS = (
+    ("home", "Home"),
+    ("my_recipes", "My Recipes"),
+    ("my_pantry", "My Pantry"),
+    ("history", "History"),
+)
+
+SESSION_DEFAULTS = {
+    "logged_in": False,
+    "auth_mode": "login",
+    "has_generated": False,
+    "generated_recipe": "",
+    "generated_recipe_ingredients": [],
+    "favorite_notice": "",
+}
+
+INVALID_RECIPE_PHRASES = (
+    "add more ingredients",
+    "couldn't find a good recipe",
+    "couldn’t find a good recipe",
+)
+
+
+@st.cache_resource
+def get_auth_sessions():
+    return {}
+
+
+def get_query_param(name):
+    try:
+        value = st.query_params.get(name)
+    except AttributeError:
+        value = st.experimental_get_query_params().get(name)
+
+    if isinstance(value, list):
+        return value[0] if value else None
+
+    return value
+
+
+def get_auth_token_from_url():
+    return get_query_param("auth")
+
+
+def set_auth_token_in_url(token):
+    try:
+        st.query_params["auth"] = token
+    except AttributeError:
+        params = st.experimental_get_query_params()
+        params["auth"] = token
+        st.experimental_set_query_params(**params)
+
+
+def clear_auth_token_from_url():
+    try:
+        if "auth" in st.query_params:
+            del st.query_params["auth"]
+    except AttributeError:
+        params = st.experimental_get_query_params()
+        params.pop("auth", None)
+        st.experimental_set_query_params(**params)
+
+
+def get_current_page():
+    page = get_query_param("page")
+
+    for page_name, page_query_value in PAGE_QUERY_VALUES.items():
+        if page_query_value == page:
+            return page_name
+
+    return "home"
+
+
+def set_authenticated_user(user_data, auth_token=None):
+    st.session_state.logged_in = True
+    st.session_state.user_id = user_data["id"]
+    st.session_state.username = user_data["username"]
+    st.session_state.email = user_data["email"]
+
+    if auth_token:
+        st.session_state.auth_token = auth_token
+
+
+def start_auth_session(user_data):
+    current_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if current_token:
+        get_auth_sessions().pop(current_token, None)
+
+    auth_token = secrets.token_urlsafe(32)
+    get_auth_sessions()[auth_token] = user_data.copy()
+    set_authenticated_user(user_data, auth_token)
+    set_auth_token_in_url(auth_token)
+
+
+def restore_auth_session():
+    if st.session_state.logged_in:
+        return
+
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if not auth_token:
+        return
+
+    user_data = get_auth_sessions().get(auth_token)
+
+    if not user_data:
+        st.session_state.pop("auth_token", None)
+        clear_auth_token_from_url()
+        return
+
+    set_authenticated_user(user_data, auth_token)
+
+
+def build_app_href(page="home"):
+    query_params = {}
+    page_query_value = PAGE_QUERY_VALUES.get(page)
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if page_query_value:
+        query_params["page"] = page_query_value
+
+    if auth_token:
+        query_params["auth"] = auth_token
+
+    if query_params:
+        return f"/?{urlencode(query_params)}"
+
+    return "/"
 
 
 def load_css():
@@ -44,7 +191,9 @@ def set_login_background():
             left: 0;
             right: 0;
             height: var(--login-header-height);
-            background: url("data:image/png;base64,{encoded}") top center / 100% auto no-repeat;
+            background:
+                url("data:image/png;base64,{encoded}")
+                top center / 100% auto no-repeat;
             pointer-events: none;
             z-index: 0;
         }}
@@ -74,27 +223,36 @@ def set_main_background():
 
 
 def init_session_state():
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
+    for key, value in SESSION_DEFAULTS.items():
+        if key not in st.session_state:
+            if isinstance(value, list):
+                st.session_state[key] = value.copy()
+            else:
+                st.session_state[key] = value
 
-    if "auth_mode" not in st.session_state:
-        st.session_state.auth_mode = "login"
+    restore_auth_session()
 
-    if "has_generated" not in st.session_state:
-        st.session_state.has_generated = False
 
-    if "generated_recipe" not in st.session_state:
-        st.session_state.generated_recipe = ""
+def reset_recipe_state():
+    st.session_state.has_generated = False
+    st.session_state.generated_recipe = ""
+    st.session_state.generated_recipe_ingredients = []
+    st.session_state.favorite_notice = ""
 
 
 def logout():
-    for key in ("user_id", "username", "email"):
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if auth_token:
+        get_auth_sessions().pop(auth_token, None)
+
+    for key in ("user_id", "username", "email", "auth_token"):
         st.session_state.pop(key, None)
 
+    clear_auth_token_from_url()
     st.session_state.logged_in = False
     st.session_state.auth_mode = "login"
-    st.session_state.has_generated = False
-    st.session_state.generated_recipe = ""
+    reset_recipe_state()
     st.rerun()
 
 
@@ -128,12 +286,8 @@ def show_login():
                     )
 
                     if success:
-                        st.session_state.logged_in = True
-                        st.session_state.user_id = user_data["id"]
-                        st.session_state.username = user_data["username"]
-                        st.session_state.email = user_data["email"]
-                        st.session_state.has_generated = False
-                        st.session_state.generated_recipe = ""
+                        start_auth_session(user_data)
+                        reset_recipe_state()
                         st.rerun()
                     else:
                         st.error(message)
@@ -197,20 +351,29 @@ def show_login():
                 st.rerun()
 
 
-def show_main_app():
+def show_nav_bar(active_page=None):
+    nav_html = []
+
+    for index, (page_name, label) in enumerate(NAV_ITEMS):
+        active_class = " is-active" if active_page == page_name else ""
+
+        if index:
+            nav_html.append('<span class="nav-separator">|</span>')
+
+        nav_html.append(
+            (
+                f'<a class="nav-link{active_class}" '
+                f'href="{build_app_href(page_name)}" target="_self">{label}</a>'
+            )
+        )
+
     with st.container(key="nav_bar"):
         st.markdown(
-            """
+            f"""
             <div class="navbar">
                 <div class="logo">DISH-IT</div>
                 <div class="menu" aria-label="Primary navigation">
-                    <span>Home</span>
-                    <span class="nav-separator">|</span>
-                    <span>My Recipes</span>
-                    <span class="nav-separator">|</span>
-                    <span>My Pantry</span>
-                    <span class="nav-separator">|</span>
-                    <span>History</span>
+                    {"".join(nav_html)}
                 </div>
                 <div class="account">
                     My Account <span class="nav-separator">|</span>
@@ -223,20 +386,159 @@ def show_main_app():
         if st.button("Log Out", key="logout_btn"):
             logout()
 
+
+def get_recipe_title(recipe_text):
+    title, _ = split_recipe_title_and_body(recipe_text)
+    return title or "Saved Recipe"
+
+
+def split_recipe_title_and_body(recipe_text):
+    lines = recipe_text.splitlines()
+
+    for index, line in enumerate(lines):
+        stripped_line = line.strip()
+
+        if stripped_line.startswith("#"):
+            title = stripped_line.lstrip("#").strip()
+
+            if title:
+                body = "\n".join(lines[index + 1 :]).strip()
+                return title[:120], body
+
+    return "", recipe_text
+
+
+def show_favorite_notice():
+    if not st.session_state.favorite_notice:
+        return
+
+    st.success(st.session_state.favorite_notice)
+    st.session_state.favorite_notice = ""
+
+
+def is_favoriteable_recipe(recipe_text):
+    lower_recipe = recipe_text.lower()
+    return not any(phrase in lower_recipe for phrase in INVALID_RECIPE_PHRASES)
+
+
+def show_generated_recipe_favorite_action():
+    recipe_text = st.session_state.generated_recipe
+    user_id = st.session_state.user_id
+    favorite_recipe_id = get_favorite_recipe_id(user_id, recipe_text)
+    is_favorited = favorite_recipe_id is not None
+
+    with st.container(key="favorite_recipe_action"):
+        favorite_clicked = st.button(
+            "Add to My Recipes",
+            key="favorite_recipe_btn",
+            disabled=is_favorited,
+        )
+
+    if not favorite_clicked:
+        return
+
+    was_added = add_favorite_recipe(
+        user_id,
+        get_recipe_title(recipe_text),
+        recipe_text,
+        st.session_state.generated_recipe_ingredients,
+    )
+    st.session_state.favorite_notice = (
+        "Recipe saved to My Recipes."
+        if was_added
+        else "This recipe is already in My Recipes."
+    )
+
+    st.rerun()
+
+
+def show_generated_recipe():
+    recipe_text = st.session_state.generated_recipe
+    title, body = split_recipe_title_and_body(recipe_text)
+
+    if not is_favoriteable_recipe(recipe_text):
+        st.markdown(recipe_text)
+        return
+
+    if not title:
+        show_generated_recipe_favorite_action()
+        st.markdown(recipe_text)
+        return
+
+    title_col, favorite_col = st.columns(
+        [0.76, 0.24],
+        gap="small",
+        vertical_alignment="center",
+    )
+
+    with title_col:
+        st.markdown(
+            f"<h2 class='generated-recipe-title'>{escape(title)}</h2>",
+            unsafe_allow_html=True,
+        )
+
+    with favorite_col:
+        show_generated_recipe_favorite_action()
+
+    if body:
+        st.markdown(body)
+
+
+def format_ingredients(ingredients):
+    return ", ".join(str(ingredient) for ingredient in ingredients)
+
+
+def show_recipe_body_without_title(recipe_text):
+    _, body = split_recipe_title_and_body(recipe_text)
+    st.markdown(body or recipe_text)
+
+
+def show_page_title(title):
+    st.markdown(
+        f"<h1 class='main-title'>{escape(title)}</h1>",
+        unsafe_allow_html=True,
+    )
+
+
+def show_empty_state(message):
+    st.markdown(
+        f"<p class='empty-state'>{escape(message)}</p>",
+        unsafe_allow_html=True,
+    )
+
+
+def show_recipe_heading(title):
+    st.markdown(
+        f"<h2 class='favorite-card-title'>{escape(title)}</h2>",
+        unsafe_allow_html=True,
+    )
+
+
+def show_recipe_meta(meta_items):
+    if not meta_items:
+        return
+
+    st.markdown(
+        f"<p class='favorite-meta'>{escape(' | '.join(meta_items))}</p>",
+        unsafe_allow_html=True,
+    )
+
+
+def show_main_app():
+    show_nav_bar(active_page="home")
+
     with st.container(key="main_card"):
         if st.session_state.has_generated:
             title_text = f"Here are your recipes, @{st.session_state.username}!"
         else:
             title_text = f"Welcome back, @{st.session_state.username}"
 
-        st.markdown(
-            f"<h1 class='main-title'>{title_text}</h1>",
-            unsafe_allow_html=True,
-        )
+        show_page_title(title_text)
 
         input_col, button_col = st.columns(
             [5, 1.4], gap="small", vertical_alignment="top"
         )
+
         with input_col:
             selected_ingredients = ingredient_selector()
 
@@ -248,17 +550,129 @@ def show_main_app():
                 )
 
         if generate_clicked:
-            if not selected_ingredients:
-                st.warning("Please select at least one ingredient.")
+            selected_ingredients = selected_ingredients or []
+
+            if len(selected_ingredients) < 2:
+                st.warning("Please select at least two ingredients.")
             else:
                 recipe = get_recipe(selected_ingredients)
                 st.session_state.generated_recipe = recipe
+                st.session_state.generated_recipe_ingredients = list(
+                    selected_ingredients
+                )
+                if is_favoriteable_recipe(recipe):
+                    add_recipe_history(
+                        st.session_state.user_id,
+                        get_recipe_title(recipe),
+                        recipe,
+                        selected_ingredients,
+                    )
                 st.session_state.has_generated = True
                 st.rerun()
 
         if st.session_state.has_generated and st.session_state.generated_recipe:
             with st.container(key="recipe_output"):
-                st.markdown(st.session_state.generated_recipe)
+                show_favorite_notice()
+                show_generated_recipe()
+
+
+def show_my_recipes_page():
+    show_nav_bar(active_page="my_recipes")
+
+    with st.container(key="main_card"):
+        show_page_title("My Recipes")
+        show_favorite_notice()
+
+        favorite_recipes = get_favorite_recipes(st.session_state.user_id)
+
+        if not favorite_recipes:
+            show_empty_state(
+                "No favorite recipes yet. "
+                "Use Add to My Recipes after generating a recipe."
+            )
+            return
+
+        for favorite_recipe in favorite_recipes:
+            with st.container(key=f"saved_recipe_{favorite_recipe['id']}"):
+                title_col, action_col = st.columns(
+                    [1, 0.12],
+                    vertical_alignment="top",
+                )
+
+                with title_col:
+                    show_recipe_heading(favorite_recipe["title"])
+
+                    if favorite_recipe["ingredients"]:
+                        show_recipe_meta(
+                            [
+                                "Ingredients: "
+                                + format_ingredients(
+                                    favorite_recipe["ingredients"]
+                                )
+                            ]
+                        )
+
+                with action_col:
+                    with st.container(
+                        key=f"favorite_remove_{favorite_recipe['id']}"
+                    ):
+                        remove_clicked = st.button(
+                            "♥",
+                            key=f"remove_favorite_{favorite_recipe['id']}",
+                            help="Remove from My Recipes",
+                        )
+
+                if remove_clicked:
+                    remove_favorite_recipe(
+                        st.session_state.user_id,
+                        favorite_recipe["id"],
+                    )
+                    st.session_state.favorite_notice = (
+                        "Recipe removed from My Recipes."
+                    )
+                    st.rerun()
+
+                show_recipe_body_without_title(favorite_recipe["recipe_text"])
+
+
+def show_my_pantry_page():
+    show_nav_bar(active_page="my_pantry")
+
+    with st.container(key="main_card"):
+        show_page_title("My Pantry")
+        show_empty_state("Sorry, we are working on implementing a new feature here.")
+
+
+def show_history_page():
+    show_nav_bar(active_page="history")
+
+    with st.container(key="main_card"):
+        show_page_title("History")
+
+        history_recipes = get_recipe_history(st.session_state.user_id)
+
+        if not history_recipes:
+            show_empty_state("No recipes generated yet.")
+            return
+
+        for history_recipe in history_recipes:
+            with st.container(key=f"saved_recipe_history_{history_recipe['id']}"):
+                show_recipe_heading(history_recipe["title"])
+
+                meta_items = []
+
+                if history_recipe["ingredients"]:
+                    meta_items.append(
+                        "Ingredients: "
+                        + format_ingredients(history_recipe["ingredients"])
+                    )
+
+                if history_recipe["created_at"]:
+                    meta_items.append(f"Generated: {history_recipe['created_at']}")
+
+                show_recipe_meta(meta_items)
+
+                show_recipe_body_without_title(history_recipe["recipe_text"])
 
 
 load_css()
@@ -270,4 +684,11 @@ if not st.session_state.logged_in:
     show_login()
 else:
     set_main_background()
-    show_main_app()
+    current_page = get_current_page()
+    page_renderers = {
+        "home": show_main_app,
+        "my_recipes": show_my_recipes_page,
+        "my_pantry": show_my_pantry_page,
+        "history": show_history_page,
+    }
+    page_renderers.get(current_page, show_main_app)()

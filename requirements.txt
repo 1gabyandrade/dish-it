@@ -1,5 +1,5 @@
-gti streamlit
+streamlit
 python-dotenv
-google-genai
+requests
 streamlit-searchbox
 bcrypt

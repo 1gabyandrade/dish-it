@@ -10,26 +10,33 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 
 def generate_recipe_with_openrouter(prompt: str):
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": "openai/gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": "You are a helpful cooking assistant."},
-                {"role": "user", "content": prompt},
-            ],
-        },
-    )
+    if not OPENROUTER_API_KEY:
+        return None
 
-    data = response.json()
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "openai/gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful cooking assistant.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            timeout=45,
+        )
+        data = response.json()
+    except requests.RequestException:
+        return None
 
-    # 🔥 DEBUG (very important)
     if "choices" not in data:
-        print("OpenRouter error:", data)
         return None
 
     return data["choices"][0]["message"]["content"]

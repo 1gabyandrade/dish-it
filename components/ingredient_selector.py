@@ -37,10 +37,32 @@ def search_ingredients(searchterm):
     matches = [
         ingredient
         for ingredient in INGREDIENTS
-        if ingredient not in selected and ingredient.lower().startswith(query)
+        if ingredient not in selected and query in ingredient.lower()
     ]
 
-    return matches[:SUGGESTION_LIMIT]
+    exact_matches = [
+        ingredient for ingredient in matches if ingredient.lower() == query
+    ]
+
+    starts_with_matches = [
+        ingredient for ingredient in matches if ingredient.lower().startswith(query)
+    ]
+
+    contains_matches = [
+        ingredient for ingredient in matches if not ingredient.lower().startswith(query)
+    ]
+
+    ordered_matches = (
+        exact_matches
+        + [
+            ingredient
+            for ingredient in starts_with_matches
+            if ingredient not in exact_matches
+        ]
+        + contains_matches
+    )
+
+    return ordered_matches[:SUGGESTION_LIMIT]
 
 
 def add_ingredient(ingredient):
@@ -101,6 +123,9 @@ def ingredient_selector():
                     "boxShadow": "none",
                     "minHeight": "44px",
                 },
+                "root": {
+                    "backgroundColor": "#3f7f4f",
+                },
                 "input": {
                     "color": "#82301a",
                 },
@@ -122,13 +147,20 @@ def ingredient_selector():
                     "border": "2px solid #ffc933",
                     "borderRadius": "18px",
                     "maxHeight": "220px",
-                    "marginTop": "-15px",
+                    "marginTop": "-14px",
                     "padding": "26px 8px 8px",
+                },
+                "menuPortal": {
+                    "backgroundColor": "#3f7f4f",
+                },
+                "container": {
+                    "backgroundColor": "#3f7f4f",
                 },
                 "option": {
                     "color": "#82301a",
                     "backgroundColor": "#fff5ec",
                     "highlightColor": "#ffc933",
+                    "padding": "6px 10px",
                 },
             },
         },
