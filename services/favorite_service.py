@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import sqlite3
 
 from database.db import get_connection
@@ -33,7 +34,8 @@ def add_favorite_recipe(user_id, title, recipe_text, ingredients):
                     recipe_hash,
                 ),
             )
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
+        logging.error(f"Add favorite failed: {e}")
         return False
 
     return True
