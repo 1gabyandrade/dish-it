@@ -29,26 +29,23 @@ The active page is visually clear, and the navbar is ready for future pages.
 
 ### Problem
 
-After logging in, clicking `Home` or refreshing the page logged the user out.
+After logging in, refreshing the page or reopening the app logged the user out.
 
 ### Cause
 
-The app relied only on Streamlit's `st.session_state`. A browser refresh can
-create a new Streamlit session, so the app lost the logged-in user.
+The app relied only on Streamlit's `st.session_state`, which is tied to a single
+session and does not persist across reloads.
 
 ### Solution
 
-I added a temporary auth token stored in memory with `st.cache_resource` and
-kept the token in the URL query parameters. The app can restore the logged-in
-user while the Streamlit server is still running.
+I introduced a temporary auth token stored in memory using `st.cache_resource`
+and passed it through URL query parameters. On app load, the token is read and
+used to restore the logged-in user.
 
 ### Result
 
-The user stays logged in after refresh or navbar navigation. Logging out or
-restarting the app clears the session.
-
-This approach was later replaced because putting auth tokens in the URL created
-a shareable-login risk. See item 9.
+The user stays logged in after refreshing the page or reopening the app, as long
+as the Streamlit server is running.
 
 ## 3. Saving Favorite Recipes
 
@@ -181,37 +178,72 @@ created `recipe_record_utils.py` for shared recipe record helpers.
 
 The codebase is easier to read and has less duplicated logic.
 
-## 9. Auth Token Could Be Reused in Another Browser
+## 9. URL Token Tradeoff for Session Persistence
 
 ### Problem
 
-The app created a temporary auth token after login and placed it in the URL.
-When a logged-in user copied that URL into another browser, the second browser
-could open the app as the same user. A browser-fingerprint attempt reduced this
-in some cases, but it was not reliable enough because different browsers could
-still produce similar request data.
+The initial implementation used auth tokens in the URL to persist sessions.
+However, URL tokens can be copied and reused in another browser, which creates a
+potential security issue.
 
 ### Cause
 
-The auth token was part of the shareable URL. Any value placed in the URL can be
-copied, pasted, bookmarked, or sent to another browser.
+Any value placed in the URL is inherently shareable. This makes URL-based tokens
+unsuitable for production authentication.
 
 ### Solution
 
-I removed auth tokens from URLs completely. Instead of using regular HTML links
-with `?auth=...`, the navbar now uses Streamlit buttons that update
-`st.session_state.current_page`. Page changes happen inside the current
-Streamlit session, so navigation no longer needs a login token in the URL.
+I temporarily removed URL tokens and switched to `st.session_state` navigation
+for better security. However, after discussion with the professor, I reintroduced
+URL tokens specifically for debugging and development purposes.
 
 ### Result
 
-Switching pages inside the app no longer requires logging in again. Copying the
-URL into another browser no longer carries the logged-in session, because the
-URL does not contain an auth token.
+The app now uses URL tokens to restore sessions across reloads during
+development, making debugging easier. In a production environment, this would be
+replaced with secure cookies and server-side session management.
 
-## Summary
+## 10. Backend Validation and Error Handling
 
-Most issues came from the app growing from a single-page prototype into a
-multi-page MVP with authentication, persistence, and account management. The
-main fixes were adding clearer routing, moving temporary data into SQLite where
-needed, and consolidating repeated UI and service logic.
+### Problem
+
+User input and API errors were not clearly validated or distinguished. Invalid
+inputs and backend failures could produce misleading messages.
+
+### Cause
+
+Validation logic was minimal, and API failures were treated the same as normal
+“no recipe found” cases.
+
+### Solution
+
+I added input normalization and validation for usernames, emails, and passwords.
+I also improved API handling by distinguishing between OpenRouter failures and
+valid “no recipe found” responses.
+
+### Result
+
+The app now provides clearer feedback, maintains cleaner data in the database,
+and behaves more predictably under error conditions.
+
+## 11. Ingredient Data Normalization
+
+### Problem
+
+Ingredient data could be stored with inconsistent formatting (e.g., casing,
+whitespace, duplicates).
+
+### Cause
+
+Ingredients were taken directly from UI input without normalization before
+saving.
+
+### Solution
+
+I added normalization logic to ensure ingredients are trimmed, lowercased, and
+deduplicated before being stored in the database.
+
+### Result
+
+Stored data is more consistent, reducing duplication and improving overall data
+quality across history and favorites.

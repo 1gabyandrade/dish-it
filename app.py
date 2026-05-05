@@ -1,4 +1,5 @@
 import base64
+import secrets
 import sqlite3
 from html import escape
 
@@ -48,6 +49,36 @@ INVALID_RECIPE_PHRASES = (
 )
 
 
+@st.cache_resource
+def get_auth_sessions():
+    return {}
+
+
+def get_auth_token_from_url():
+    try:
+        return st.query_params.get("auth")
+    except AttributeError:
+        value = st.experimental_get_query_params().get("auth")
+        return value[0] if isinstance(value, list) and value else value
+
+
+def set_auth_token_in_url(token):
+    try:
+        st.query_params["auth"] = token
+    except AttributeError:
+        st.experimental_set_query_params(auth=token)
+
+
+def clear_auth_token_from_url():
+    try:
+        if "auth" in st.query_params:
+            del st.query_params["auth"]
+    except AttributeError:
+        params = st.experimental_get_query_params()
+        params.pop("auth", None)
+        st.experimental_set_query_params(**params)
+
+
 def get_current_page():
     return st.session_state.get("current_page", "home")
 
@@ -57,16 +88,54 @@ def set_current_page(page_name):
     st.session_state.confirm_delete_account = False
 
 
-def set_authenticated_user(user_data):
+def set_authenticated_user(user_data, auth_token=None):
     st.session_state.logged_in = True
     st.session_state.user_id = user_data["id"]
     st.session_state.username = user_data["username"]
     st.session_state.email = user_data["email"]
 
+    if auth_token:
+        st.session_state.auth_token = auth_token
+
 
 def start_auth_session(user_data):
-    set_authenticated_user(user_data)
+    old_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if old_token:
+        get_auth_sessions().pop(old_token, None)
+
+    auth_token = secrets.token_urlsafe(32)
+    get_auth_sessions()[auth_token] = user_data.copy()
+
+    set_authenticated_user(user_data, auth_token)
+    set_auth_token_in_url(auth_token)
     st.session_state.current_page = "home"
+
+
+def restore_auth_session():
+    if st.session_state.logged_in:
+        return
+
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if not auth_token:
+        return
+
+    user_data = get_auth_sessions().get(auth_token)
+
+    if not user_data:
+        st.session_state.pop("auth_token", None)
+        clear_auth_token_from_url()
+        return
+
+    set_authenticated_user(user_data, auth_token)
+
+
+def update_stored_auth_session(user_data):
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if auth_token:
+        get_auth_sessions()[auth_token] = user_data.copy()
 
 
 def load_css():
@@ -141,6 +210,7 @@ def init_session_state():
                 st.session_state[key] = value.copy()
             else:
                 st.session_state[key] = value
+    restore_auth_session()
 
 
 def reset_recipe_state():
@@ -151,15 +221,15 @@ def reset_recipe_state():
 
 
 def logout():
-    for key in ("user_id", "username", "email"):
+    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
+
+    if auth_token:
+        get_auth_sessions().pop(auth_token, None)
+
+    for key in ("user_id", "username", "email", "auth_token"):
         st.session_state.pop(key, None)
 
-    st.session_state.logged_in = False
-    st.session_state.auth_mode = "login"
-    st.session_state.confirm_delete_account = False
-    st.session_state.current_page = "home"
-    reset_recipe_state()
-    st.rerun()
+    clear_auth_token_from_url()
 
 
 def show_login():
@@ -668,6 +738,7 @@ def show_my_account_page():
 
                     st.session_state.username = username
                     st.session_state.email = email
+                    update_stored_auth_session(user_data)
 
                     st.success(message)
                 else:
