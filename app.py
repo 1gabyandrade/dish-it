@@ -2,6 +2,7 @@ import base64
 import logging
 import secrets
 import sqlite3
+import time
 from html import escape
 
 import streamlit as st
@@ -46,6 +47,7 @@ SESSION_DEFAULTS = {
     "favorite_notice": "",
     "confirm_delete_account": False,
     "current_page": "home",
+    "last_recipe_request_time": 0,
 }
 
 INVALID_RECIPE_PHRASES = (
@@ -558,14 +560,26 @@ def show_main_app():
         if generate_clicked:
             selected_ingredients = selected_ingredients or []
 
-            if len(selected_ingredients) < 2:
+            current_time = time.time()
+            seconds_since_last_request = (
+                current_time - st.session_state.last_recipe_request_time
+            )
+
+            if seconds_since_last_request < 5:
+                st.warning(
+                    "Please wait a few seconds before generating another recipe."
+                )
+            elif len(selected_ingredients) < 2:
                 st.warning("Please select at least two ingredients.")
             else:
+                st.session_state.last_recipe_request_time = current_time
+
                 recipe = get_recipe(selected_ingredients)
                 st.session_state.generated_recipe = recipe
                 st.session_state.generated_recipe_ingredients = list(
                     selected_ingredients
                 )
+
                 if is_favoriteable_recipe(recipe):
                     add_recipe_history(
                         st.session_state.user_id,
@@ -573,6 +587,7 @@ def show_main_app():
                         recipe,
                         selected_ingredients,
                     )
+
                 st.session_state.has_generated = True
                 st.rerun()
 
