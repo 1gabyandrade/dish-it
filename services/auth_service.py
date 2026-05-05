@@ -1,8 +1,52 @@
+import re
 import sqlite3
 
 import bcrypt
 
 from database.db import get_connection
+
+MIN_USERNAME_LENGTH = 3
+MIN_PASSWORD_LENGTH = 6
+
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def normalize_username(username):
+    return username.strip()
+
+
+def normalize_email(email):
+    return email.strip().lower()
+
+
+def validate_username(username):
+    if not username:
+        return False, "Username is required."
+
+    if len(username) < MIN_USERNAME_LENGTH:
+        return False, "Username must be at least 3 characters."
+
+    return True, ""
+
+
+def validate_email(email):
+    if not email:
+        return False, "Email is required."
+
+    if not EMAIL_PATTERN.match(email):
+        return False, "Please enter a valid email address."
+
+    return True, ""
+
+
+def validate_password(password):
+    if not password:
+        return False, "Password is required."
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return False, "Password must be at least 6 characters."
+
+    return True, ""
 
 
 def hash_password(password):
@@ -14,6 +58,21 @@ def check_password(password, password_hash):
 
 
 def create_user(username, email, password):
+    username = normalize_username(username)
+    email = normalize_email(email)
+
+    username_is_valid, username_message = validate_username(username)
+    if not username_is_valid:
+        return False, username_message
+
+    email_is_valid, email_message = validate_email(email)
+    if not email_is_valid:
+        return False, email_message
+
+    password_is_valid, password_message = validate_password(password)
+    if not password_is_valid:
+        return False, password_message
+
     password_hash = hash_password(password)
 
     try:
@@ -28,11 +87,16 @@ def create_user(username, email, password):
 
         return True, "Account created successfully."
 
-    except Exception:
+    except sqlite3.IntegrityError:
         return False, "Username or email is already registered."
+
+    except Exception:
+        return False, "Something went wrong. Please try again."
 
 
 def authenticate_user(login_identifier, password):
+    login_identifier = login_identifier.strip()
+
     with get_connection() as conn:
         user = conn.execute(
             """
@@ -40,7 +104,7 @@ def authenticate_user(login_identifier, password):
             FROM users
             WHERE username = ? OR email = ?
             """,
-            (login_identifier, login_identifier),
+            (login_identifier, login_identifier.lower()),
         ).fetchone()
 
     if not user:
@@ -61,6 +125,25 @@ def authenticate_user(login_identifier, password):
 
 
 def update_user_account(user_id, username, email, old_password, new_password=None):
+    username = normalize_username(username)
+    email = normalize_email(email)
+
+    username_is_valid, username_message = validate_username(username)
+    if not username_is_valid:
+        return False, username_message
+
+    email_is_valid, email_message = validate_email(email)
+    if not email_is_valid:
+        return False, email_message
+
+    if not old_password:
+        return False, "Current password is required."
+
+    if new_password:
+        password_is_valid, password_message = validate_password(new_password)
+        if not password_is_valid:
+            return False, password_message
+
     with get_connection() as conn:
         user = conn.execute(
             """
@@ -79,9 +162,13 @@ def update_user_account(user_id, username, email, old_password, new_password=Non
         if not check_password(old_password, password_hash):
             return False, "Current password is incorrect."
 
+        if new_password and check_password(new_password, password_hash):
+            return False, "New password must be different from the current password."
+
         try:
             if new_password:
                 new_password_hash = hash_password(new_password)
+
                 conn.execute(
                     """
                     UPDATE users
@@ -102,6 +189,9 @@ def update_user_account(user_id, username, email, old_password, new_password=Non
 
         except sqlite3.IntegrityError:
             return False, "Username or email is already used."
+
+        except Exception:
+            return False, "Something went wrong. Please try again."
 
     return True, "Account updated successfully."
 
