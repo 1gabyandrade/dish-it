@@ -11,7 +11,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 def generate_recipe_with_openrouter(prompt: str):
     if not OPENROUTER_API_KEY:
-        return None
+        return {"success": False, "error": "missing_api_key"}
 
     try:
         response = requests.post(
@@ -32,11 +32,16 @@ def generate_recipe_with_openrouter(prompt: str):
             },
             timeout=45,
         )
+
         data = response.json()
+
     except requests.RequestException:
-        return None
+        return {"success": False, "error": "request_failed"}
 
     if "choices" not in data:
-        return None
+        return {"success": False, "error": "invalid_response"}
 
-    return data["choices"][0]["message"]["content"]
+    return {
+        "success": True,
+        "recipe": data["choices"][0]["message"]["content"],
+    }

@@ -13,12 +13,30 @@ Please add at least **2 ingredients** so I can create a better recipe for you.
 """
 
     prompt = build_recipe_prompt(ingredients)
-    recipe = generate_recipe_with_openrouter(prompt)
+    result = generate_recipe_with_openrouter(prompt)
 
+    # API error
+    if not result["success"]:
+        return generate_api_error_message()
+
+    recipe = result["recipe"]
+
+    # Valid recipe
     if recipe and NO_RECIPE_FOUND not in recipe:
         return recipe
 
+    # No recipe found
     return generate_no_recipe_message(ingredients)
+
+
+def generate_api_error_message():
+    return """
+### Recipe service is unavailable 🚧
+
+Something went wrong while generating your recipe.
+
+Please try again in a moment.
+"""
 
 
 def generate_no_recipe_message(ingredients):
