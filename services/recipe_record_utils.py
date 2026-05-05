@@ -1,8 +1,28 @@
 import json
 
 
+def normalize_ingredient(ingredient):
+    return str(ingredient).strip().lower()
+
+
+def normalize_ingredients(ingredients):
+    normalized_ingredients = []
+    seen_ingredients = set()
+
+    for ingredient in ingredients or []:
+        normalized = normalize_ingredient(ingredient)
+
+        if not normalized or normalized in seen_ingredients:
+            continue
+
+        normalized_ingredients.append(normalized)
+        seen_ingredients.add(normalized)
+
+    return normalized_ingredients
+
+
 def encode_ingredients(ingredients):
-    return json.dumps(list(ingredients or []))
+    return json.dumps(normalize_ingredients(ingredients))
 
 
 def decode_ingredients(ingredients):
@@ -14,7 +34,10 @@ def decode_ingredients(ingredients):
     except json.JSONDecodeError:
         return []
 
-    return decoded if isinstance(decoded, list) else []
+    if not isinstance(decoded, list):
+        return []
+
+    return normalize_ingredients(decoded)
 
 
 def rows_to_recipe_dicts(rows):
