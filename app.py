@@ -239,6 +239,14 @@ def logout():
 
     clear_auth_token_from_url()
 
+    st.session_state.logged_in = False
+    st.session_state.auth_mode = "login"
+    st.session_state.confirm_delete_account = False
+    st.session_state.current_page = "home"
+
+    reset_recipe_state()
+    st.rerun()
+
 
 def show_login():
     with st.container(key="login_card"):
@@ -795,7 +803,13 @@ def show_my_account_page():
                     )
 
                 if confirm_yes:
-                    delete_user_account(st.session_state.user_id)
+                    user_id = st.session_state.user_id
+
+                    st.session_state.current_page = "home"
+                    st.session_state.logged_in = False
+                    st.session_state.confirm_delete_account = False
+
+                    delete_user_account(user_id)
                     logout()
 
                 if confirm_no:
