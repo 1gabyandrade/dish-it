@@ -14,7 +14,8 @@ list, generate a recipe with AI, and save useful recipes for later.
 Current features:
 
 - Account creation and login
-- Temporary logged-in sessions that survive page refreshes while the app is running
+- Logged-in navigation inside the current browser session
+- URLs do not carry login tokens that can be reused in another browser
 - Ingredient search and selection
 - AI recipe generation through OpenRouter
 - Favorite recipes saved in `My Recipes`

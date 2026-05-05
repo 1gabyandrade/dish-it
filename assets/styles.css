@@ -15,7 +15,7 @@
 }
 
 .block-container {
-  padding-top: 100px;
+  padding-top: 120px;
 }
 
 /* LOGIN */
@@ -162,133 +162,236 @@
 
 /* NAVBAR */
 .st-key-nav_bar {
+  --nav-height: 96px;
+  --nav-logo-left: 28px;
+  --nav-logo-top: 6px;
+  --nav-menu-left: 260px;
+  --nav-menu-bottom: 15px;
+  --nav-right-top: 20px;
+  --nav-right-right: 28px;
+
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
 
-  height: 66px;
+  width: 100vw !important;
+  height: var(--nav-height) !important;
+  padding: 0 !important;
+
+  background-color: var(--yellow);
   z-index: 999999;
 }
 
-.st-key-nav_bar .element-container {
+.st-key-nav_bar .element-container,
+.st-key-nav_bar div[data-testid="stMarkdownContainer"],
+.st-key-nav_bar div[data-testid="stMarkdownContainer"] p {
   margin: 0 !important;
+  padding: 0 !important;
 }
 
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-
-  display: flex;
-  align-items: center;
-
-  width: 100vw;
-  height: 66px;
-  padding: 0 12px 0 10px;
-
-  background-color: var(--yellow);
-  z-index: 999998;
+.st-key-nav_logo {
+  position: absolute !important;
+  top: var(--nav-logo-top);
+  left: var(--nav-logo-left);
+  z-index: 1000000;
 }
 
 .logo {
-  margin-right: 24px;
-
   color: var(--brown);
   font-family: "Passion One", sans-serif;
-  font-size: 46px;
+  font-size: 64px;
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
 }
 
-.menu {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-
-  color: var(--brown);
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.menu .nav-separator {
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.menu .nav-link,
-.menu .nav-link:visited {
-  color: var(--brown);
-  text-decoration: none;
-}
-
-.menu .nav-link:hover,
-.menu .nav-link.is-active {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.account {
-  --account-link-font-size: 12px;
-
-  position: fixed;
-  top: 10px;
-  right: 58px;
-
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  color: var(--brown);
-  font-size: var(--account-link-font-size);
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
+.st-key-nav_menu_actions {
+  position: absolute !important;
+  top: auto !important;
+  bottom: var(--nav-menu-bottom) !important;
+  left: var(--nav-menu-left);
   z-index: 1000000;
-}
 
-.account .nav-separator {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* LOG OUT BUTTON */
-.st-key-nav_bar div[data-testid="stButton"] {
-  position: fixed;
-  top: 3px;
-  right: 8px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 18px !important;
 
   width: auto !important;
-  margin: 0 !important;
-  z-index: 1000001;
-}
-
-.st-key-nav_bar div[data-testid="stButton"] button,
-.st-key-nav_bar div[data-testid="stButton"] button *,
-.st-key-nav_bar div[data-testid="stButton"] button p {
-  all: unset !important;
-
-  color: var(--brown) !important;
-  font-family: inherit !important;
-  font-size: 12px !important;
-  font-weight: 800 !important;
-  line-height: 1 !important;
-}
-
-.st-key-nav_bar div[data-testid="stButton"] button {
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-.st-key-nav_bar div[data-testid="stButton"] button:hover p {
+.st-key-nav_right_actions {
+  position: absolute !important;
+  top: var(--nav-right-top);
+  right: var(--nav-right-right);
+  z-index: 1000000;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.st-key-nav_bar div[data-testid="stButton"] {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.st-key-nav_bar button,
+.st-key-nav_bar button *,
+.st-key-nav_bar button p {
+  all: unset !important;
+
+  color: var(--brown) !important;
+  font-family: inherit !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+.st-key-nav_bar button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.st-key-nav_menu_actions button,
+.st-key-nav_menu_actions button *,
+.st-key-nav_menu_actions button p {
+  font-size: 16px !important;
+}
+
+.st-key-nav_right_actions button,
+.st-key-nav_right_actions button *,
+.st-key-nav_right_actions button p {
+  font-size: 14px !important;
+}
+
+.st-key-nav_bar button:hover p {
   text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+}
+
+.nav-separator {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 2px !important;
+
+  color: var(--brown);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nav-separator.small {
+  font-size: 20px;
+}
+
+.logo {
+  position: relative;
+  top: 16px;
+
+  color: var(--brown);
+  font-family: "Passion One", sans-serif;
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.st-key-nav_menu_actions {
+  position: relative;
+  top: 16px;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 18px !important;
+
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.st-key-nav_right_actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.st-key-nav_bar div[data-testid="stButton"] {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.st-key-nav_bar button,
+.st-key-nav_bar button *,
+.st-key-nav_bar button p {
+  all: unset !important;
+
+  color: var(--brown) !important;
+  font-family: inherit !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+.st-key-nav_bar button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.st-key-nav_menu_actions button,
+.st-key-nav_menu_actions button *,
+.st-key-nav_menu_actions button p {
+  font-size: 18px !important;
+}
+
+.st-key-nav_right_actions button,
+.st-key-nav_right_actions button *,
+.st-key-nav_right_actions button p {
+  font-size: 14px !important;
+}
+
+.st-key-nav_bar button:hover p {
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+}
+
+.nav-separator {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 2px !important;
+
+  color: var(--brown);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nav-separator.small {
+  font-size: 20px;
 }
 
 /* MAIN CARD */
@@ -655,46 +758,47 @@ iframe[title="streamlit_searchbox.searchbox"] {
 }
 
 @media (max-width: 760px) {
-  .st-key-nav_bar,
-  .navbar {
-    height: 82px;
-  }
+  .st-key-nav_bar {
+    --nav-height: 82px;
+    --nav-logo-left: 12px;
+    --nav-logo-top: 10px;
+    --nav-menu-left: 12px;
+    --nav-menu-top: 56px;
+    --nav-right-top: 10px;
+    --nav-right-right: 12px;
 
-  .navbar {
-    align-items: flex-start;
-    padding: 8px 12px;
+    height: var(--nav-height) !important;
   }
 
   .logo {
-    margin-right: 0;
     font-size: 40px;
   }
 
-  .menu {
-    position: fixed;
-    top: 54px;
-    left: 12px;
-    right: 12px;
-
-    gap: 10px;
+  .st-key-nav_menu_actions {
+    width: calc(100vw - 24px) !important;
+    gap: 10px !important;
     overflow-x: auto;
-    padding-bottom: 4px;
-
-    font-size: 14px;
+    padding-bottom: 4px !important;
   }
 
-  .menu .nav-separator {
+  .st-key-nav_menu_actions button,
+  .st-key-nav_menu_actions button *,
+  .st-key-nav_menu_actions button p {
+    font-size: 14px !important;
+  }
+
+  .st-key-nav_right_actions button,
+  .st-key-nav_right_actions button *,
+  .st-key-nav_right_actions button p {
+    font-size: 12px !important;
+  }
+
+  .nav-separator {
     font-size: 18px;
   }
 
-  .account {
-    top: 10px;
-    right: 58px;
-  }
-
-  .st-key-nav_bar div[data-testid="stButton"] {
-    top: 3px;
-    right: 8px;
+  .nav-separator.small {
+    font-size: 16px;
   }
 
   .st-key-main_card {

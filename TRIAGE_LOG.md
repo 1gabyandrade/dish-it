@@ -47,6 +47,9 @@ user while the Streamlit server is still running.
 The user stays logged in after refresh or navbar navigation. Logging out or
 restarting the app clears the session.
 
+This approach was later replaced because putting auth tokens in the URL created
+a shareable-login risk. See item 9.
+
 ## 3. Saving Favorite Recipes
 
 ### Problem
@@ -177,6 +180,34 @@ created `recipe_record_utils.py` for shared recipe record helpers.
 ### Result
 
 The codebase is easier to read and has less duplicated logic.
+
+## 9. Auth Token Could Be Reused in Another Browser
+
+### Problem
+
+The app created a temporary auth token after login and placed it in the URL.
+When a logged-in user copied that URL into another browser, the second browser
+could open the app as the same user. A browser-fingerprint attempt reduced this
+in some cases, but it was not reliable enough because different browsers could
+still produce similar request data.
+
+### Cause
+
+The auth token was part of the shareable URL. Any value placed in the URL can be
+copied, pasted, bookmarked, or sent to another browser.
+
+### Solution
+
+I removed auth tokens from URLs completely. Instead of using regular HTML links
+with `?auth=...`, the navbar now uses Streamlit buttons that update
+`st.session_state.current_page`. Page changes happen inside the current
+Streamlit session, so navigation no longer needs a login token in the URL.
+
+### Result
+
+Switching pages inside the app no longer requires logging in again. Copying the
+URL into another browser no longer carries the logged-in session, because the
+URL does not contain an auth token.
 
 ## Summary
 

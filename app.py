@@ -1,8 +1,6 @@
 import base64
-import secrets
 import sqlite3
 from html import escape
-from urllib.parse import urlencode
 
 import streamlit as st
 
@@ -25,14 +23,6 @@ from services.recipe_service import get_recipe
 
 st.set_page_config(page_title="Dish-It", page_icon="🍳", layout="wide")
 
-PAGE_QUERY_VALUES = {
-    "home": None,
-    "my_recipes": "my-recipes",
-    "my_pantry": "my-pantry",
-    "history": "history",
-    "my_account": "my-account",
-}
-
 NAV_ITEMS = (
     ("home", "Home"),
     ("my_recipes", "My Recipes"),
@@ -48,6 +38,7 @@ SESSION_DEFAULTS = {
     "generated_recipe_ingredients": [],
     "favorite_notice": "",
     "confirm_delete_account": False,
+    "current_page": "home",
 }
 
 INVALID_RECIPE_PHRASES = (
@@ -57,119 +48,25 @@ INVALID_RECIPE_PHRASES = (
 )
 
 
-@st.cache_resource
-def get_auth_sessions():
-    return {}
-
-
-def get_query_param(name):
-    try:
-        value = st.query_params.get(name)
-    except AttributeError:
-        value = st.experimental_get_query_params().get(name)
-
-    if isinstance(value, list):
-        return value[0] if value else None
-
-    return value
-
-
-def get_auth_token_from_url():
-    return get_query_param("auth")
-
-
-def set_auth_token_in_url(token):
-    try:
-        st.query_params["auth"] = token
-    except AttributeError:
-        params = st.experimental_get_query_params()
-        params["auth"] = token
-        st.experimental_set_query_params(**params)
-
-
-def clear_auth_token_from_url():
-    try:
-        if "auth" in st.query_params:
-            del st.query_params["auth"]
-    except AttributeError:
-        params = st.experimental_get_query_params()
-        params.pop("auth", None)
-        st.experimental_set_query_params(**params)
-
-
 def get_current_page():
-    page = get_query_param("page")
-
-    for page_name, page_query_value in PAGE_QUERY_VALUES.items():
-        if page_query_value == page:
-            return page_name
-
-    return "home"
+    return st.session_state.get("current_page", "home")
 
 
-def set_authenticated_user(user_data, auth_token=None):
+def set_current_page(page_name):
+    st.session_state.current_page = page_name
+    st.session_state.confirm_delete_account = False
+
+
+def set_authenticated_user(user_data):
     st.session_state.logged_in = True
     st.session_state.user_id = user_data["id"]
     st.session_state.username = user_data["username"]
     st.session_state.email = user_data["email"]
 
-    if auth_token:
-        st.session_state.auth_token = auth_token
-
 
 def start_auth_session(user_data):
-    current_token = st.session_state.get("auth_token") or get_auth_token_from_url()
-
-    if current_token:
-        get_auth_sessions().pop(current_token, None)
-
-    auth_token = secrets.token_urlsafe(32)
-    get_auth_sessions()[auth_token] = user_data.copy()
-    set_authenticated_user(user_data, auth_token)
-    set_auth_token_in_url(auth_token)
-
-
-def update_stored_auth_session(user_data):
-    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
-
-    if auth_token:
-        get_auth_sessions()[auth_token] = user_data.copy()
-
-
-def restore_auth_session():
-    if st.session_state.logged_in:
-        return
-
-    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
-
-    if not auth_token:
-        return
-
-    user_data = get_auth_sessions().get(auth_token)
-
-    if not user_data:
-        st.session_state.pop("auth_token", None)
-        clear_auth_token_from_url()
-        return
-
-    set_authenticated_user(user_data, auth_token)
-
-
-def build_app_href(page="home"):
-    query_params = {}
-    page_query_value = PAGE_QUERY_VALUES.get(page)
-    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
-
-    if page_query_value:
-        query_params["page"] = page_query_value
-
-    if auth_token:
-        query_params["auth"] = auth_token
-
-    if query_params:
-        return f"/?{urlencode(query_params)}"
-
-    return "/"
+    set_authenticated_user(user_data)
+    st.session_state.current_page = "home"
 
 
 def load_css():
@@ -245,8 +142,6 @@ def init_session_state():
             else:
                 st.session_state[key] = value
 
-    restore_auth_session()
-
 
 def reset_recipe_state():
     st.session_state.has_generated = False
@@ -256,18 +151,13 @@ def reset_recipe_state():
 
 
 def logout():
-    auth_token = st.session_state.get("auth_token") or get_auth_token_from_url()
-
-    if auth_token:
-        get_auth_sessions().pop(auth_token, None)
-
-    for key in ("user_id", "username", "email", "auth_token"):
+    for key in ("user_id", "username", "email"):
         st.session_state.pop(key, None)
 
-    clear_auth_token_from_url()
     st.session_state.logged_in = False
     st.session_state.auth_mode = "login"
     st.session_state.confirm_delete_account = False
+    st.session_state.current_page = "home"
     reset_recipe_state()
     st.rerun()
 
@@ -439,45 +329,68 @@ def show_login():
 
 
 def show_nav_bar(active_page=None):
-    nav_html = []
+    with st.container(key="nav_bar"):
+        with st.container(key="nav_logo"):
+            st.markdown('<div class="logo">DISH-IT</div>', unsafe_allow_html=True)
 
-    for index, (page_name, label) in enumerate(NAV_ITEMS):
-        active_class = " is-active" if active_page == page_name else ""
+        with st.container(
+            key="nav_menu_actions",
+            horizontal=True,
+            vertical_alignment="center",
+            gap="small",
+        ):
+            for index, (page_name, label) in enumerate(NAV_ITEMS):
+                st.button(
+                    label,
+                    key=f"nav_{page_name}_btn",
+                    on_click=set_current_page,
+                    args=(page_name,),
+                )
 
-        if index:
-            nav_html.append('<span class="nav-separator">|</span>')
+                if index < len(NAV_ITEMS) - 1:
+                    st.markdown(
+                        '<span class="nav-separator">|</span>',
+                        unsafe_allow_html=True,
+                    )
 
-        nav_html.append(
-            (
-                f'<a class="nav-link{active_class}" '
-                f'href="{build_app_href(page_name)}" target="_self">{label}</a>'
+        with st.container(
+            key="nav_right_actions",
+            horizontal=True,
+            vertical_alignment="center",
+            gap="small",
+        ):
+            st.button(
+                "My Account",
+                key="nav_my_account_btn",
+                on_click=set_current_page,
+                args=("my_account",),
             )
+
+            st.markdown(
+                '<span class="nav-separator small">|</span>',
+                unsafe_allow_html=True,
+            )
+
+            if st.button("Log Out", key="logout_btn"):
+                logout()
+
+        active_button_key = (
+            "nav_my_account_btn"
+            if active_page == "my_account"
+            else f"nav_{active_page}_btn"
         )
 
-    account_active_class = " is-active" if active_page == "my_account" else ""
-    my_account_href = build_app_href("my_account")
-
-    with st.container(key="nav_bar"):
         st.markdown(
             f"""
-            <div class="navbar">
-                <div class="logo">DISH-IT</div>
-                <div class="menu" aria-label="Primary navigation">
-                    {"".join(nav_html)}
-                </div>
-                <div class="account">
-                    <a class="account-link{account_active_class}"
-                       href="{my_account_href}"
-                       target="_self">My Account</a>
-                    <span class="nav-separator">|</span>
-                </div>
-            </div>
+            <style>
+            .st-key-{active_button_key} button p {{
+                text-decoration: underline !important;
+                text-underline-offset: 4px !important;
+            }}
+            </style>
             """,
             unsafe_allow_html=True,
         )
-
-        if st.button("Log Out", key="logout_btn"):
-            logout()
 
 
 def get_recipe_title(recipe_text):
@@ -831,7 +744,6 @@ def show_my_account_page():
 
                     st.session_state.username = username
                     st.session_state.email = email
-                    update_stored_auth_session(user_data)
 
                     st.success(message)
                 else:
