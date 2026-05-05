@@ -1,3 +1,4 @@
+import logging
 import re
 import sqlite3
 
@@ -90,7 +91,8 @@ def create_user(username, email, password):
     except sqlite3.IntegrityError:
         return False, "Username or email is already registered."
 
-    except Exception:
+    except Exception as e:
+        logging.error(f"Create user failed: {e}")
         return False, "Something went wrong. Please try again."
 
 

@@ -1,3 +1,4 @@
+import logging
 import os
 
 import requests
@@ -35,10 +36,12 @@ def generate_recipe_with_openrouter(prompt: str):
 
         data = response.json()
 
-    except requests.RequestException:
+    except requests.RequestException as e:
+        logging.error(f"OpenRouter request failed: {e}")
         return {"success": False, "error": "request_failed"}
 
     if "choices" not in data:
+        logging.error(f"Invalid OpenRouter response: {data}")
         return {"success": False, "error": "invalid_response"}
 
     return {

@@ -1,4 +1,5 @@
 import base64
+import logging
 import secrets
 import sqlite3
 from html import escape
@@ -21,6 +22,11 @@ from services.favorite_service import (
 )
 from services.history_service import add_recipe_history, get_recipe_history
 from services.recipe_service import get_recipe
+
+logging.basicConfig(
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 st.set_page_config(page_title="Dish-It", page_icon="🍳", layout="wide")
 
