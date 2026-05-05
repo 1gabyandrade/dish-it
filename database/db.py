@@ -1,11 +1,12 @@
 import sqlite3
 
-
 DB_PATH = "database/dish_it.db"
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect("database/dish_it.db")
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 def init_db():

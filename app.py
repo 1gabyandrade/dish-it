@@ -8,9 +8,9 @@ from components.ingredient_selector import ingredient_selector
 from database.db import get_connection, init_db
 from services.auth_service import (
     authenticate_user,
-    check_password,
     create_user,
-    hash_password,
+    delete_user_account,
+    update_user_account,
 )
 from services.favorite_service import (
     add_favorite_recipe,
@@ -160,82 +160,6 @@ def logout():
     st.session_state.current_page = "home"
     reset_recipe_state()
     st.rerun()
-
-
-def update_user_account(user_id, username, email, current_password, new_password=None):
-    with get_connection() as conn:
-        user = conn.execute(
-            """
-            SELECT password_hash
-            FROM users
-            WHERE id = ?
-            """,
-            (user_id,),
-        ).fetchone()
-
-        if not user:
-            return False, "User not found."
-
-        password_hash = user[0]
-
-        if not check_password(current_password, password_hash):
-            return False, "Current password is incorrect."
-
-        try:
-            if new_password:
-                new_password_hash = hash_password(new_password)
-
-                conn.execute(
-                    """
-                    UPDATE users
-                    SET username = ?, email = ?, password_hash = ?
-                    WHERE id = ?
-                    """,
-                    (username, email, new_password_hash, user_id),
-                )
-            else:
-                conn.execute(
-                    """
-                    UPDATE users
-                    SET username = ?, email = ?
-                    WHERE id = ?
-                    """,
-                    (username, email, user_id),
-                )
-
-        except sqlite3.IntegrityError:
-            return False, "Username or email is already registered."
-
-    return True, "Account updated successfully."
-
-
-def delete_user_account(user_id):
-    with get_connection() as conn:
-        conn.execute(
-            """
-            DELETE FROM favorite_recipes
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
-
-        conn.execute(
-            """
-            DELETE FROM recipe_history
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
-
-        conn.execute(
-            """
-            DELETE FROM users
-            WHERE id = ?
-            """,
-            (user_id,),
-        )
-
-    return True
 
 
 def show_login():
